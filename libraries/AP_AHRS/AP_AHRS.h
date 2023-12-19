@@ -421,6 +421,29 @@ public:
         return _ekf_type;
     }
 
+    enum class EKFType : uint8_t {
+#if AP_AHRS_DCM_ENABLED
+        DCM = 0,
+#endif
+#if HAL_NAVEKF3_AVAILABLE
+        THREE = 3,
+#endif
+#if HAL_NAVEKF2_AVAILABLE
+        TWO = 2,
+#endif
+#if AP_AHRS_SIM_ENABLED
+        SIM = 10,
+#endif
+#if HAL_EXTERNAL_AHRS_ENABLED
+        EXTERNAL = 11,
+#endif
+    };
+
+    // set the selected ekf type, for RC aux control
+    void set_ekf_type(EKFType ahrs_type) {
+        _ekf_type.set(ahrs_type);
+    }
+    
     // these are only out here so vehicles can reference them for parameters
 #if HAL_NAVEKF2_AVAILABLE
     NavEKF2 EKF2;
@@ -668,7 +691,7 @@ private:
      */
     AP_Int8 _wind_max;
     AP_Int8 _board_orientation;
-    AP_Int8 _ekf_type;
+    AP_Enum<EKFType> _ekf_type;
 
     /*
      * DCM-backend parameters; it takes references to these
@@ -683,23 +706,6 @@ private:
     AP_Enum<GPSUse> _gps_use;
     AP_Int8 _gps_minsats;
 
-    enum class EKFType {
-#if AP_AHRS_DCM_ENABLED
-        DCM = 0,
-#endif
-#if HAL_NAVEKF3_AVAILABLE
-        THREE = 3,
-#endif
-#if HAL_NAVEKF2_AVAILABLE
-        TWO = 2,
-#endif
-#if AP_AHRS_SIM_ENABLED
-        SIM = 10,
-#endif
-#if HAL_EXTERNAL_AHRS_ENABLED
-        EXTERNAL = 11,
-#endif
-    };
     EKFType active_EKF_type(void) const { return state.active_EKF; }
 
     bool always_use_EKF() const {
