@@ -68,7 +68,7 @@ void AC_CustomControl::init(void)
             _backend_var_info[get_type()] = AC_CustomControl_PID::var_info;
             break;
         case CustomControlType::CONT_ADRC:
-            _backend = new AC_CustomControl_ADRC(*this, _ahrs, _atti_control, _motors, _dt);
+            _backend = new AC_CustomControl_ADRC(*this, _ahrs, _att_control, _motors, _dt);
             _backend_var_info[get_type()] = AC_CustomControl_ADRC::var_info;
             break;
         default:

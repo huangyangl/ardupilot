@@ -1,6 +1,6 @@
 #include "AC_CustomControl_ADRC.h"
 
-#if CUSTOMCONTROL_EMPTY_ENABLED
+#if CUSTOMCONTROL_ADRC_ENABLED
 
 #include <GCS_MAVLink/GCS.h>
 

@@ -8,6 +8,10 @@
 
 #if CUSTOMCONTROL_ADRC_ENABLED
 
+#include <AP_Common/AP_Common.h>
+#include <AP_Param/AP_Param.h>
+#include "AC_ADRC/AC_ADRC.h"
+
 class AC_CustomControl_ADRC : public AC_CustomControl_Backend {
 public:
     AC_CustomControl_ADRC(AC_CustomControl& frontend, AP_AHRS_View*& ahrs, AC_AttitudeControl*& att_control, AP_MotorsMulticopter*& motors, float dt);
