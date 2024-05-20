@@ -14,11 +14,16 @@ import re
 import pickle
 import struct
 import base64
+import subprocess
 
 _dynamic_env_data = {}
 def _load_dynamic_env_data(bld):
     bldnode = bld.bldnode.make_node('modules/ChibiOS')
-    tmp_str = bldnode.find_node('include_dirs').read()
+    include_dirs_node = bldnode.find_node('include_dirs')
+    if include_dirs_node is None:
+        _dynamic_env_data['include_dirs'] = []
+        return
+    tmp_str = include_dirs_node.read()
     tmp_str = tmp_str.replace(';\n','')
     tmp_str = tmp_str.replace('-I','')  #remove existing -I flags
     # split, coping with separator
@@ -143,6 +148,27 @@ class set_default_parameters(Task.Task):
             defaults.save()
 
 
+def check_elf_symbols(task):
+    '''
+    check for disallowed symbols in elf file, such as C++ exceptions
+    '''
+    elfpath = task.inputs[0].abspath()
+
+    if not task.env.vehicle_binary or task.env.SIM_ENABLED:
+        # we only want to check symbols for vehicle binaries, allowing examples
+        # to use C++ exceptions. We also allow them in simulator builds
+        return
+
+    # we use string find on these symbols, so this catches all types of throw
+    # calls this should catch all uses of exceptions unless the compiler
+    # manages to inline them
+    blacklist = ['std::__throw']
+
+    nmout = subprocess.getoutput("%s -C %s" % (task.env.get_flat('NM'), elfpath))
+    for b in blacklist:
+        if nmout.find(b) != -1:
+            raise Errors.WafError("Disallowed symbol in %s: %s" % (elfpath, b))
+
 class generate_bin(Task.Task):
     color='CYAN'
     # run_str="${OBJCOPY} -O binary ${SRC} ${TGT}"
@@ -154,6 +180,8 @@ class generate_bin(Task.Task):
     def keyword(self):
         return "Generating"
     def run(self):
+        check_elf_symbols(self)
+
         if self.env.HAS_EXTERNAL_FLASH_SECTIONS:
             ret = self.split_sections()
             if (ret < 0):
@@ -233,8 +261,13 @@ def sign_firmware(image, private_keyfile):
     try:
         import monocypher
     except ImportError:
-        Logs.error("Please install monocypher with: python3 -m pip install pymonocypher")
+        Logs.error("Please install monocypher with: python3 -m pip install pymonocypher==3.1.3.2")
         return None
+
+    if monocypher.__version__ != "3.1.3.2":
+        Logs.error("must use monocypher 3.1.3.2, please run: python3 -m pip install pymonocypher==3.1.3.2")
+        return None
+
     try:
         key = open(private_keyfile, 'r').read()
     except Exception as ex:
@@ -411,7 +444,10 @@ def chibios_firmware(self):
     bootloader_bin = self.bld.srcnode.make_node("Tools/bootloaders/%s_bl.bin" % self.env.BOARD)
     if self.bld.env.HAVE_INTEL_HEX:
         if os.path.exists(bootloader_bin.abspath()):
-            hex_target = self.bld.bldnode.find_or_declare('bin/' + link_output.change_ext('.hex').name)
+            if int(self.bld.env.FLASH_RESERVE_START_KB) > 0:
+                hex_target = self.bld.bldnode.find_or_declare('bin/' + link_output.change_ext('_with_bl.hex').name)
+            else:
+                hex_target = self.bld.bldnode.find_or_declare('bin/' + link_output.change_ext('.hex').name)
             hex_task = self.create_task('build_intel_hex', src=[bin_target[0], bootloader_bin], tgt=hex_target)
             hex_task.set_run_after(cleanup_task)
         else:
@@ -461,11 +497,6 @@ def setup_canmgr_build(cfg):
             'CANARD_ALLOCATE_SEM=1'
             ]
 
-    if cfg.env.HAL_CANFD_SUPPORTED:
-        env.DEFINES += ['UAVCAN_SUPPORT_CANFD=1']
-    else:
-        env.DEFINES += ['UAVCAN_SUPPORT_CANFD=0']
-
     cfg.get_board().with_can = True
 
 def setup_canperiph_build(cfg):
@@ -474,11 +505,6 @@ def setup_canperiph_build(cfg):
     env.DEFINES += [
         'CANARD_ENABLE_DEADLINE=1',
         ]
-
-    if cfg.env.HAL_CANFD_SUPPORTED:
-        env.DEFINES += ['UAVCAN_SUPPORT_CANFD=1']
-    else:
-        env.DEFINES += ['UAVCAN_SUPPORT_CANFD=0']
 
     cfg.get_board().with_can = True
     
@@ -539,6 +565,7 @@ def configure(cfg):
     cfg.find_program('make', var='MAKE')
     #cfg.objcopy = cfg.find_program('%s-%s'%(cfg.env.TOOLCHAIN,'objcopy'), var='OBJCOPY', mandatory=True)
     cfg.find_program('arm-none-eabi-objcopy', var='OBJCOPY')
+    cfg.find_program('arm-none-eabi-nm', var='NM')
     env = cfg.env
     bldnode = cfg.bldnode.make_node(cfg.variant)
     def srcpath(path):
@@ -691,8 +718,6 @@ def build(bld):
     common_src += bld.path.ant_glob('libraries/AP_HAL_ChibiOS/hwdef/common/*.mk')
     common_src += bld.path.ant_glob('modules/ChibiOS/os/hal/**/*.[ch]')
     common_src += bld.path.ant_glob('modules/ChibiOS/os/hal/**/*.mk')
-    common_src += bld.path.ant_glob('modules/ChibiOS/ext/lwip/src/**/*.[ch]')
-    common_src += bld.path.ant_glob('modules/ChibiOS/ext/lwip/src/core/**/*.[ch]')
     if bld.env.ROMFS_FILES:
         common_src += [bld.bldnode.find_or_declare('ap_romfs_embedded.h')]
 
@@ -728,16 +753,19 @@ def build(bld):
     if bld.env.ENABLE_CRASHDUMP:
         bld.env.LINKFLAGS += ['-Wl,-whole-archive', 'modules/ChibiOS/libcc.a', '-Wl,-no-whole-archive']
     # list of functions that will be wrapped to move them out of libc into our
-    # own code note that we also include functions that we deliberately don't
-    # implement anywhere (the FILE* functions). This allows us to get link
-    # errors if we accidentially try to use one of those functions either
-    # directly or via another libc call
-    wraplist = ['sscanf', 'fprintf', 'snprintf', 'vsnprintf','vasprintf','asprintf','vprintf','scanf',
-                'fiprintf','printf',
-                'fopen', 'fflush', 'fwrite', 'fread', 'fputs', 'fgets',
-                'clearerr', 'fseek', 'ferror', 'fclose', 'tmpfile', 'getc', 'ungetc', 'feof',
-                'ftell', 'freopen', 'remove', 'vfprintf', 'fscanf',
-                '_gettimeofday', '_times', '_times_r', '_gettimeofday_r', 'time', 'clock',
-                '_sbrk', '_sbrk_r', '_malloc_r', '_calloc_r', '_free_r']
-    for w in wraplist:
+    # own code
+    wraplist = ['sscanf', 'fprintf', 'snprintf', 'vsnprintf', 'vasprintf', 'asprintf', 'vprintf', 'scanf', 'printf']
+
+    # list of functions that we will give a link error for if they are
+    # used. This is to prevent accidential use of these functions
+    blacklist = ['_sbrk', '_sbrk_r', '_malloc_r', '_calloc_r', '_free_r', 'ftell',
+                 'fopen', 'fflush', 'fwrite', 'fread', 'fputs', 'fgets',
+                 'clearerr', 'fseek', 'ferror', 'fclose', 'tmpfile', 'getc', 'ungetc', 'feof',
+                'ftell', 'freopen', 'remove', 'vfprintf', 'vfprintf_r', 'fscanf',
+                '_gettimeofday', '_times', '_times_r', '_gettimeofday_r', 'time', 'clock']
+
+    # these functions use global state that is not thread safe
+    blacklist += ['gmtime']
+
+    for w in wraplist + blacklist:
         bld.env.LINKFLAGS += ['-Wl,--wrap,%s' % w]

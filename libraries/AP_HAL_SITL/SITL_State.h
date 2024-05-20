@@ -59,7 +59,6 @@ private:
     void _set_param_default(const char *parm);
     void _usage(void);
     void _sitl_setup();
-    void _setup_fdm(void);
     void _setup_timer(void);
     void _setup_adc(void);
 
@@ -68,8 +67,6 @@ private:
     void _set_signal_handlers(void) const;
 
     void _update_airspeed(float airspeed);
-    void _check_rc_input(void);
-    bool _read_rc_sitl_input();
     void _fdm_input_local(void);
     void _output_to_flightgear(void);
     void _simulator_servos(struct sitl_input &input);
@@ -85,7 +82,6 @@ private:
 
     Scheduler *_scheduler;
 
-    SocketAPM _sitl_rc_in{true};
     uint16_t _rcin_port;
     uint16_t _fg_view_port;
     uint16_t _irlock_port;

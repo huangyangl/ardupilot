@@ -225,7 +225,7 @@ const AP_Param::GroupInfo AP_BoardConfig::var_info[] = {
     AP_GROUPINFO("IO_ENABLE", 10, AP_BoardConfig, state.io_enable, 1),
 #endif
 
-#if HAL_RCINPUT_WITH_AP_RADIO
+#if AP_RADIO_ENABLED
     // @Group: RADIO
     // @Path: ../AP_Radio/AP_Radio.cpp
     AP_SUBGROUPINFO(_radio, "RADIO", 11, AP_BoardConfig, AP_Radio),
@@ -354,6 +354,14 @@ const AP_Param::GroupInfo AP_BoardConfig::var_info[] = {
     // @RebootRequired: True
     // @User: Advanced
     AP_GROUPINFO("SD_MISSION", 24, AP_BoardConfig, sdcard_storage.mission_kb, 0),
+
+    // @Param: SD_FENCE
+    // @DisplayName:  SDCard Fence size
+    // @Description: This sets the amount of storage in kilobytes reserved on the microsd card in fence.stg for fence storage.
+    // @Range: 0 64
+    // @RebootRequired: True
+    // @User: Advanced
+    AP_GROUPINFO("SD_FENCE", 29, AP_BoardConfig, sdcard_storage.fence_kb, 0),
 #endif
 
     // index 25 used by SER5_RTSCTS

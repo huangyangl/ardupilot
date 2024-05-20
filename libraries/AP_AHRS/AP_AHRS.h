@@ -25,6 +25,7 @@
 
 #include <AP_HAL/Semaphores.h>
 
+#include "AP_AHRS_Backend.h"
 #include <AP_NavEKF2/AP_NavEKF2.h>
 #include <AP_NavEKF3/AP_NavEKF3.h>
 #include <AP_NavEKF/AP_Nav_Common.h>              // definitions shared by inertial and ekf nav filters
@@ -114,6 +115,15 @@ public:
     // return a wind estimation vector, in m/s; returns 0,0,0 on failure
     bool wind_estimate(Vector3f &wind) const;
 
+    // Determine how aligned heading_deg is with the wind. Return result
+    // is 1.0 when perfectly aligned heading into wind, -1 when perfectly
+    // aligned with-wind, and zero when perfect cross-wind. There is no
+    // distinction between a left or right cross-wind. Wind speed is ignored
+    float wind_alignment(const float heading_deg) const;
+
+    // returns forward head-wind component in m/s. Negative means tail-wind
+    float head_wind(void) const;
+
     // instruct DCM to update its wind estimate:
     void estimate_wind() {
 #if AP_AHRS_DCM_ENABLED
@@ -131,10 +141,11 @@ public:
      */
 
     // get apparent to true airspeed ratio
-    float get_EAS2TAS(void) const {
-        return state.EAS2TAS;
-    }
+    float get_EAS2TAS(void) const;
 
+    // get air density / sea level density - decreases as altitude climbs
+    float get_air_density_ratio(void) const;
+    
     // return an airspeed estimate if available. return true
     // if we have an estimate
     bool airspeed_estimate(float &airspeed_ret) const;
@@ -434,7 +445,7 @@ public:
 #if AP_AHRS_SIM_ENABLED
         SIM = 10,
 #endif
-#if HAL_EXTERNAL_AHRS_ENABLED
+#if AP_AHRS_EXTERNAL_ENABLED
         EXTERNAL = 11,
 #endif
     };
@@ -539,10 +550,6 @@ public:
      */
 
     // roll/pitch/yaw euler angles, all in radians
-    float roll;
-    float pitch;
-    float yaw;
-
     float get_roll() const { return roll; }
     float get_pitch() const { return pitch; }
     float get_yaw() const { return yaw; }
@@ -672,6 +679,11 @@ public:
 
 private:
 
+    // roll/pitch/yaw euler angles, all in radians
+    float roll;
+    float pitch;
+    float yaw;
+
     // optional view class
     AP_AHRS_View *_view;
 
@@ -790,7 +802,7 @@ private:
     void update_SITL(void);
 #endif
 
-#if HAL_EXTERNAL_AHRS_ENABLED
+#if AP_AHRS_EXTERNAL_ENABLED
     void update_external(void);
 #endif    
 
@@ -992,7 +1004,7 @@ private:
     struct AP_AHRS_Backend::Estimates sim_estimates;
 #endif
 
-#if HAL_EXTERNAL_AHRS_ENABLED
+#if AP_AHRS_EXTERNAL_ENABLED
     AP_AHRS_External external;
     struct AP_AHRS_Backend::Estimates external_estimates;
 #endif

@@ -26,6 +26,8 @@
 #include "SIM_GPS_SBP.h"
 #include "SIM_GPS_UBLOX.h"
 
+#include <GCS_MAVLink/GCS.h>
+
 // the number of GPS leap seconds - copied from AP_GPS.h
 #define GPS_LEAPSECONDS_MILLIS 18000ULL
 
@@ -279,6 +281,9 @@ void GPS::check_backend_allocation()
 #endif
     };
 
+    if (configured_type != Type::NONE && backend == nullptr) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SIM_GPS: No backend for %u", (unsigned)configured_type);
+    }
     allocated_type = configured_type;
 }
 
@@ -457,10 +462,9 @@ GPS_Data GPS::interpolate_data(const GPS_Data &d, uint32_t delay_ms)
     return _gps_history[N-1];
 }
 
-float GPS_Data::heading() const
+float GPS_Data::ground_track_rad() const
 {
-    const auto velocity = Vector2d{speedE, speedN};
-    return velocity.angle();
+    return atan2f(speedE, speedN);
 }
 
 float GPS_Data::speed_2d() const
