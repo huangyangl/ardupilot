@@ -56,8 +56,9 @@ local PSC_prefixes = { "PSC", "Q_P" }
 local PID_prefixes = { "_RAT_RLL_", "_RAT_PIT_", "_RAT_YAW_" }
 local PID_suffixes = { "FF", "P", "I", "D", "D_FF", "PDMX", "NEF", "NTF", "IMAX", "FLTD", "FLTE", "FLTT", "SMAX" }
 local angle_axes = { "RLL", "PIT", "YAW" }
+local rate_limit_axes = { "R", "P", "Y"}
 local PSC_types = { "ACCZ", "VELZ", "POSZ", "VELXY", "POSXY" }
-local OTHER_PARAMS = { "INS_GYRO_FILTER", "INS_ACCEL_FILTER" }
+local OTHER_PARAMS = { "INS_GYRO_FILTER", "INS_ACCEL_FILTER", "PTCH2SRV_TCONST", "RLL2SRV_TCONST" }
 
 if PREV_ENABLE:get() == 0 then
    return
@@ -89,10 +90,17 @@ for _, atc in ipairs(ATC_prefixes) do
    end
 end
 
+-- add angular rate limits
+for _, atc in ipairs(ATC_prefixes) do
+   for _, axis in ipairs(rate_limit_axes) do
+      add_param(atc .. "_RATE_" .. axis .. "_MAX")
+   end
+end
+
 -- add fixed wing tuning
 for _, suffix in ipairs(PID_suffixes) do
    add_param("RLL_RATE_" .. suffix)
-   add_param("PIT_RATE_" .. suffix)
+   add_param("PTCH_RATE_" .. suffix)
    add_param("YAW_RATE_" .. suffix)
 end
 

@@ -956,7 +956,7 @@ void ToyMode::handle_message(const mavlink_message_t &msg)
         // immediately update AP_Notify recording flag
         AP_Notify::flags.video_recording = true;
     } else if (strncmp(m.name, "WIFICHAN", 10) == 0) {
-#if HAL_RCINPUT_WITH_AP_RADIO
+#if AP_RADIO_ENABLED
         AP_Radio *radio = AP_Radio::get_singleton();
         if (radio) {
             radio->set_wifi_channel(m.value);
@@ -991,6 +991,7 @@ void ToyMode::thrust_limiting(float *thrust, uint8_t num_motors)
     uint16_t pwm[4];
     hal.rcout->read(pwm, 4);
 
+#if HAL_LOGGING_ENABLED
 // @LoggerMessage: THST
 // @Description: Maximum thrust limitation based on battery voltage in Toy Mode
 // @Field: TimeUS: Time since system startup
@@ -1008,7 +1009,7 @@ void ToyMode::thrust_limiting(float *thrust, uint8_t num_motors)
                                                (double)thrust_mul,
                                                pwm[0], pwm[1], pwm[2], pwm[3]);
     }
-                                           
+#endif
 }
 
 #if ENABLE_LOAD_TEST

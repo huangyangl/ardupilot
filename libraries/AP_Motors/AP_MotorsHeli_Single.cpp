@@ -28,8 +28,8 @@ const AP_Param::GroupInfo AP_MotorsHeli_Single::var_info[] = {
 
     // @Param: TAIL_TYPE
     // @DisplayName: Tail Type
-    // @Description: Tail type selection.  Simpler yaw controller used if external gyro is selected. Direct Drive Variable Pitch is used for tails that have a motor that is governed at constant speed by an ESC.  Tail pitch is still accomplished with a servo.  Direct Drive Fixed Pitch (DDFP) CW is used for helicopters with a rotor that spins clockwise when viewed from above. Direct Drive Fixed Pitch (DDFP) CCW is used for helicopters with a rotor that spins counter clockwise when viewed from above. In both DDFP cases, no servo is used for the tail and the tail motor esc is controlled by the yaw axis.
-    // @Values: 0:Servo only,1:Servo with ExtGyro,2:DirectDrive VarPitch,3:DirectDrive FixedPitch CW,4:DirectDrive FixedPitch CCW,5:DDVP with external governor
+    // @Description: Tail type selection. Servo Only uses tail rotor pitch to provide yaw control (including stabilization) via an output assigned to Motor4.  Servo with External Gyro uses an external gyro to control tail rotor pitch via a servo.  Yaw control without stabilization is passed to the external gyro via the output assigned to Motor4.  Direct Drive Variable Pitch(DDVP) is used for tails that have a motor whose ESC is connected to an output with function HeliTailRSC. Tail pitch is still accomplished with a servo on an output assigned to Motor4 function.  Direct Drive Fixed Pitch (DDFP) CW is used for helicopters with a rotor that spins clockwise when viewed from above with a motor whose ESC is controlled by an output whose function is Motor4. Direct Drive Fixed Pitch (DDFP) CCW is used for helicopters with a rotor that spins counter clockwise when viewed from above with a motor whose ESC is controlled by an output whose function is Motor4. In both DDFP cases, no servo is used for the tail and the tail motor esc on Motor4 output is used to control the yaw axis using motor speed.
+    // @Values: 0:Servo only,1:Servo with ExtGyro,2:DirectDrive VarPitch,3:DirectDrive FixedPitch CW,4:DirectDrive FixedPitch CCW
     // @User: Standard
     AP_GROUPINFO("TAIL_TYPE", 4, AP_MotorsHeli_Single, _tail_type, float(TAIL_TYPE::SERVO)),
 
@@ -37,7 +37,7 @@ const AP_Param::GroupInfo AP_MotorsHeli_Single::var_info[] = {
 
     // @Param: GYR_GAIN
     // @DisplayName: External Gyro Gain
-    // @Description: PWM in microseconds sent to external gyro on ch7 when tail type is Servo w/ ExtGyro
+    // @Description: PWM in microseconds sent to external gyro on an servo/output whose function is Motor7 when tail type is Servo w/ ExtGyro
     // @Range: 0 1000
     // @Units: PWM
     // @Increment: 1
@@ -57,7 +57,7 @@ const AP_Param::GroupInfo AP_MotorsHeli_Single::var_info[] = {
 
     // @Param: TAIL_SPEED
     // @DisplayName: DDVP Tail ESC speed
-    // @Description: Direct drive, variable pitch tail ESC speed in percent output to the tail motor esc (HeliTailRSC Servo) when motor interlock enabled (throttle hold off).
+    // @Description: Direct drive, variable pitch tail ESC speed in percent output to the tail motor esc (HeliTailRSC Servo) when motor interlock enabled (throttle hold off) and speed fully ramped up after spoolup.
     // @Range: 0 100
     // @Units: %
     // @Increment: 1
@@ -66,7 +66,7 @@ const AP_Param::GroupInfo AP_MotorsHeli_Single::var_info[] = {
 
     // @Param: GYR_GAIN_ACRO
     // @DisplayName: ACRO External Gyro Gain
-    // @Description: PWM in microseconds sent to external gyro on ch7 when tail type is Servo w/ ExtGyro. A value of zero means to use H_GYR_GAIN
+    // @Description: PWM in microseconds sent to external gyro on an servo/output whose function is Motor7 when tail type is Servo w/ ExtGyro in mode ACRO instead of H_GYR_GAIN. A value of zero means to use H_GYR_GAIN
     // @Range: 0 1000
     // @Units: PWM
     // @Increment: 1
@@ -362,7 +362,7 @@ void AP_MotorsHeli_Single::update_motor_control(AP_MotorsHeli_RSC::RotorControlS
     }
 
     // Check if both rotors are run-up, tail rotor controller always returns true if not enabled
-    _heliflags.rotor_runup_complete = ( _main_rotor.is_runup_complete() && _tail_rotor.is_runup_complete() );
+    set_rotor_runup_complete(_main_rotor.is_runup_complete() && _tail_rotor.is_runup_complete());
 
     // Check if both rotors are spooled down, tail rotor controller always returns true if not enabled
     _heliflags.rotor_spooldown_complete = ( _main_rotor.is_spooldown_complete() );
@@ -381,10 +381,6 @@ void AP_MotorsHeli_Single::move_actuators(float roll_out, float pitch_out, float
     // initialize limits flag
     limit.throttle_lower = false;
     limit.throttle_upper = false;
-
-    if (_heliflags.inverted_flight) {
-        coll_in = 1 - coll_in;
-    }
 
     // rescale roll_out and pitch_out into the min and max ranges to provide linear motion
     // across the input range instead of stopping when the input hits the constrain value
@@ -695,3 +691,14 @@ bool AP_MotorsHeli_Single::use_tail_RSC() const
     return (type == TAIL_TYPE::DIRECTDRIVE_VARPITCH) ||
            (type == TAIL_TYPE::DIRECTDRIVE_VARPIT_EXT_GOV);
 }
+
+#if HAL_LOGGING_ENABLED
+void AP_MotorsHeli_Single::Log_Write(void)
+{
+    // For single heli we have to apply an additional cyclic scaler of sqrt(2.0) because the
+    // definition of when we achieve _cyclic_max is different to dual heli. In single, _cyclic_max
+    // is limited at sqrt(2.0), in dual it is limited at 1.0
+    float cyclic_angle_scaler = get_cyclic_angle_scaler() * sqrtf(2.0);
+    _swashplate.write_log(cyclic_angle_scaler, _collective_min_deg.get(), _collective_max_deg.get(), _collective_min.get(), _collective_max.get());
+}
+#endif

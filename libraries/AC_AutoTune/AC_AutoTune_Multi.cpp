@@ -149,6 +149,7 @@ void AC_AutoTune_Multi::backup_gains_and_initialise()
     orig_roll_ri = attitude_control->get_rate_roll_pid().kI();
     orig_roll_rd = attitude_control->get_rate_roll_pid().kD();
     orig_roll_rff = attitude_control->get_rate_roll_pid().ff();
+    orig_roll_dff = attitude_control->get_rate_roll_pid().kDff();
     orig_roll_fltt = attitude_control->get_rate_roll_pid().filt_T_hz();
     orig_roll_smax = attitude_control->get_rate_roll_pid().slew_limit();
     orig_roll_sp = attitude_control->get_angle_roll_p().kP();
@@ -162,6 +163,7 @@ void AC_AutoTune_Multi::backup_gains_and_initialise()
     orig_pitch_ri = attitude_control->get_rate_pitch_pid().kI();
     orig_pitch_rd = attitude_control->get_rate_pitch_pid().kD();
     orig_pitch_rff = attitude_control->get_rate_pitch_pid().ff();
+    orig_pitch_dff = attitude_control->get_rate_pitch_pid().kDff();
     orig_pitch_fltt = attitude_control->get_rate_pitch_pid().filt_T_hz();
     orig_pitch_smax = attitude_control->get_rate_pitch_pid().slew_limit();
     orig_pitch_sp = attitude_control->get_angle_pitch_p().kP();
@@ -175,6 +177,7 @@ void AC_AutoTune_Multi::backup_gains_and_initialise()
     orig_yaw_ri = attitude_control->get_rate_yaw_pid().kI();
     orig_yaw_rd = attitude_control->get_rate_yaw_pid().kD();
     orig_yaw_rff = attitude_control->get_rate_yaw_pid().ff();
+    orig_yaw_dff = attitude_control->get_rate_yaw_pid().kDff();
     orig_yaw_fltt = attitude_control->get_rate_yaw_pid().filt_T_hz();
     orig_yaw_smax = attitude_control->get_rate_yaw_pid().slew_limit();
     orig_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_E_hz();
@@ -192,7 +195,7 @@ void AC_AutoTune_Multi::backup_gains_and_initialise()
     tune_yaw_sp = attitude_control->get_angle_yaw_p().kP();
     tune_yaw_accel = attitude_control->get_accel_yaw_max_cdss();
 
-    AP::logger().Write_Event(LogEvent::AUTOTUNE_INITIALISED);
+    LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_INITIALISED);
 }
 
 // load_orig_gains - set gains to their original values
@@ -206,6 +209,7 @@ void AC_AutoTune_Multi::load_orig_gains()
             attitude_control->get_rate_roll_pid().kI(orig_roll_ri);
             attitude_control->get_rate_roll_pid().kD(orig_roll_rd);
             attitude_control->get_rate_roll_pid().ff(orig_roll_rff);
+            attitude_control->get_rate_roll_pid().kDff(orig_roll_dff);
             attitude_control->get_rate_roll_pid().filt_T_hz(orig_roll_fltt);
             attitude_control->get_rate_roll_pid().slew_limit(orig_roll_smax);
             attitude_control->get_angle_roll_p().kP(orig_roll_sp);
@@ -218,6 +222,7 @@ void AC_AutoTune_Multi::load_orig_gains()
             attitude_control->get_rate_pitch_pid().kI(orig_pitch_ri);
             attitude_control->get_rate_pitch_pid().kD(orig_pitch_rd);
             attitude_control->get_rate_pitch_pid().ff(orig_pitch_rff);
+            attitude_control->get_rate_pitch_pid().kDff(orig_pitch_dff);
             attitude_control->get_rate_pitch_pid().filt_T_hz(orig_pitch_fltt);
             attitude_control->get_rate_pitch_pid().slew_limit(orig_pitch_smax);
             attitude_control->get_angle_pitch_p().kP(orig_pitch_sp);
@@ -230,6 +235,7 @@ void AC_AutoTune_Multi::load_orig_gains()
             attitude_control->get_rate_yaw_pid().kI(orig_yaw_ri);
             attitude_control->get_rate_yaw_pid().kD(orig_yaw_rd);
             attitude_control->get_rate_yaw_pid().ff(orig_yaw_rff);
+            attitude_control->get_rate_yaw_pid().kDff(orig_yaw_dff);
             attitude_control->get_rate_yaw_pid().filt_E_hz(orig_yaw_rLPF);
             attitude_control->get_rate_yaw_pid().filt_T_hz(orig_yaw_fltt);
             attitude_control->get_rate_yaw_pid().slew_limit(orig_yaw_smax);
@@ -253,6 +259,7 @@ void AC_AutoTune_Multi::load_tuned_gains()
             attitude_control->get_rate_roll_pid().kI(tune_roll_rp*AUTOTUNE_PI_RATIO_FINAL);
             attitude_control->get_rate_roll_pid().kD(tune_roll_rd);
             attitude_control->get_rate_roll_pid().ff(orig_roll_rff);
+            attitude_control->get_rate_roll_pid().kDff(orig_roll_dff);
             attitude_control->get_angle_roll_p().kP(tune_roll_sp);
             attitude_control->set_accel_roll_max_cdss(tune_roll_accel);
         }
@@ -263,6 +270,7 @@ void AC_AutoTune_Multi::load_tuned_gains()
             attitude_control->get_rate_pitch_pid().kI(tune_pitch_rp*AUTOTUNE_PI_RATIO_FINAL);
             attitude_control->get_rate_pitch_pid().kD(tune_pitch_rd);
             attitude_control->get_rate_pitch_pid().ff(orig_pitch_rff);
+            attitude_control->get_rate_pitch_pid().kDff(orig_pitch_dff);
             attitude_control->get_angle_pitch_p().kP(tune_pitch_sp);
             attitude_control->set_accel_pitch_max_cdss(tune_pitch_accel);
         }
@@ -278,6 +286,7 @@ void AC_AutoTune_Multi::load_tuned_gains()
                 attitude_control->get_rate_yaw_pid().filt_E_hz(tune_yaw_rLPF);
             }
             attitude_control->get_rate_yaw_pid().ff(orig_yaw_rff);
+            attitude_control->get_rate_yaw_pid().kDff(orig_yaw_dff);
             attitude_control->get_angle_yaw_p().kP(tune_yaw_sp);
             attitude_control->set_accel_yaw_max_cdss(tune_yaw_accel);
         }
@@ -296,6 +305,7 @@ void AC_AutoTune_Multi::load_intra_test_gains()
         attitude_control->get_rate_roll_pid().kI(orig_roll_rp*AUTOTUNE_PI_RATIO_FOR_TESTING);
         attitude_control->get_rate_roll_pid().kD(orig_roll_rd);
         attitude_control->get_rate_roll_pid().ff(orig_roll_rff);
+        attitude_control->get_rate_roll_pid().kDff(orig_roll_dff);
         attitude_control->get_rate_roll_pid().filt_T_hz(orig_roll_fltt);
         attitude_control->get_rate_roll_pid().slew_limit(orig_roll_smax);
         attitude_control->get_angle_roll_p().kP(orig_roll_sp);
@@ -305,6 +315,7 @@ void AC_AutoTune_Multi::load_intra_test_gains()
         attitude_control->get_rate_pitch_pid().kI(orig_pitch_rp*AUTOTUNE_PI_RATIO_FOR_TESTING);
         attitude_control->get_rate_pitch_pid().kD(orig_pitch_rd);
         attitude_control->get_rate_pitch_pid().ff(orig_pitch_rff);
+        attitude_control->get_rate_pitch_pid().kDff(orig_pitch_dff);
         attitude_control->get_rate_pitch_pid().filt_T_hz(orig_pitch_fltt);
         attitude_control->get_rate_pitch_pid().slew_limit(orig_pitch_smax);
         attitude_control->get_angle_pitch_p().kP(orig_pitch_sp);
@@ -314,6 +325,7 @@ void AC_AutoTune_Multi::load_intra_test_gains()
         attitude_control->get_rate_yaw_pid().kI(orig_yaw_rp*AUTOTUNE_PI_RATIO_FOR_TESTING);
         attitude_control->get_rate_yaw_pid().kD(orig_yaw_rd);
         attitude_control->get_rate_yaw_pid().ff(orig_yaw_rff);
+        attitude_control->get_rate_yaw_pid().kDff(orig_yaw_dff);
         attitude_control->get_rate_yaw_pid().filt_T_hz(orig_yaw_fltt);
         attitude_control->get_rate_yaw_pid().slew_limit(orig_yaw_smax);
         attitude_control->get_rate_yaw_pid().filt_E_hz(orig_yaw_rLPF);
@@ -331,6 +343,7 @@ void AC_AutoTune_Multi::load_test_gains()
         attitude_control->get_rate_roll_pid().kI(tune_roll_rp*0.01f);
         attitude_control->get_rate_roll_pid().kD(tune_roll_rd);
         attitude_control->get_rate_roll_pid().ff(0.0f);
+        attitude_control->get_rate_roll_pid().kDff(0.0f);
         attitude_control->get_rate_roll_pid().filt_T_hz(0.0f);
         attitude_control->get_rate_roll_pid().slew_limit(0.0f);
         attitude_control->get_angle_roll_p().kP(tune_roll_sp);
@@ -340,6 +353,7 @@ void AC_AutoTune_Multi::load_test_gains()
         attitude_control->get_rate_pitch_pid().kI(tune_pitch_rp*0.01f);
         attitude_control->get_rate_pitch_pid().kD(tune_pitch_rd);
         attitude_control->get_rate_pitch_pid().ff(0.0f);
+        attitude_control->get_rate_pitch_pid().kDff(0.0f);
         attitude_control->get_rate_pitch_pid().filt_T_hz(0.0f);
         attitude_control->get_rate_pitch_pid().slew_limit(0.0f);
         attitude_control->get_angle_pitch_p().kP(tune_pitch_sp);
@@ -349,6 +363,7 @@ void AC_AutoTune_Multi::load_test_gains()
         attitude_control->get_rate_yaw_pid().kP(tune_yaw_rp);
         attitude_control->get_rate_yaw_pid().kI(tune_yaw_rp*0.01f);
         attitude_control->get_rate_yaw_pid().ff(0.0f);
+        attitude_control->get_rate_yaw_pid().kDff(0.0f);
         if (axis == YAW_D) {
             attitude_control->get_rate_yaw_pid().kD(tune_yaw_rd);
         } else {
@@ -383,6 +398,7 @@ void AC_AutoTune_Multi::save_tuning_gains()
         attitude_control->get_rate_roll_pid().kI(tune_roll_rp*AUTOTUNE_PI_RATIO_FINAL);
         attitude_control->get_rate_roll_pid().kD(tune_roll_rd);
         attitude_control->get_rate_roll_pid().ff(orig_roll_rff);
+        attitude_control->get_rate_roll_pid().kDff(orig_roll_dff);
         attitude_control->get_rate_roll_pid().filt_T_hz(orig_roll_fltt);
         attitude_control->get_rate_roll_pid().slew_limit(orig_roll_smax);
         attitude_control->get_rate_roll_pid().save_gains();
@@ -399,6 +415,7 @@ void AC_AutoTune_Multi::save_tuning_gains()
         orig_roll_ri = attitude_control->get_rate_roll_pid().kI();
         orig_roll_rd = attitude_control->get_rate_roll_pid().kD();
         orig_roll_rff = attitude_control->get_rate_roll_pid().ff();
+        orig_roll_dff = attitude_control->get_rate_roll_pid().kDff();
         orig_roll_sp = attitude_control->get_angle_roll_p().kP();
         orig_roll_accel = attitude_control->get_accel_roll_max_cdss();
     }
@@ -409,6 +426,7 @@ void AC_AutoTune_Multi::save_tuning_gains()
         attitude_control->get_rate_pitch_pid().kI(tune_pitch_rp*AUTOTUNE_PI_RATIO_FINAL);
         attitude_control->get_rate_pitch_pid().kD(tune_pitch_rd);
         attitude_control->get_rate_pitch_pid().ff(orig_pitch_rff);
+        attitude_control->get_rate_pitch_pid().kDff(orig_pitch_dff);
         attitude_control->get_rate_pitch_pid().filt_T_hz(orig_pitch_fltt);
         attitude_control->get_rate_pitch_pid().slew_limit(orig_pitch_smax);
         attitude_control->get_rate_pitch_pid().save_gains();
@@ -425,6 +443,7 @@ void AC_AutoTune_Multi::save_tuning_gains()
         orig_pitch_ri = attitude_control->get_rate_pitch_pid().kI();
         orig_pitch_rd = attitude_control->get_rate_pitch_pid().kD();
         orig_pitch_rff = attitude_control->get_rate_pitch_pid().ff();
+        orig_pitch_dff = attitude_control->get_rate_pitch_pid().kDff();
         orig_pitch_sp = attitude_control->get_angle_pitch_p().kP();
         orig_pitch_accel = attitude_control->get_accel_pitch_max_cdss();
     }
@@ -435,6 +454,7 @@ void AC_AutoTune_Multi::save_tuning_gains()
         attitude_control->get_rate_yaw_pid().kP(tune_yaw_rp);
         attitude_control->get_rate_yaw_pid().kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
         attitude_control->get_rate_yaw_pid().ff(orig_yaw_rff);
+        attitude_control->get_rate_yaw_pid().kDff(orig_yaw_dff);
         attitude_control->get_rate_yaw_pid().filt_T_hz(orig_yaw_fltt);
         attitude_control->get_rate_yaw_pid().slew_limit(orig_yaw_smax);
         if (yaw_d_enabled()) {
@@ -457,6 +477,7 @@ void AC_AutoTune_Multi::save_tuning_gains()
         orig_yaw_ri = attitude_control->get_rate_yaw_pid().kI();
         orig_yaw_rd = attitude_control->get_rate_yaw_pid().kD();
         orig_yaw_rff = attitude_control->get_rate_yaw_pid().ff();
+        orig_yaw_dff = attitude_control->get_rate_yaw_pid().kDff();
         orig_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_E_hz();
         orig_yaw_sp = attitude_control->get_angle_yaw_p().kP();
         orig_yaw_accel = attitude_control->get_accel_yaw_max_cdss();
@@ -464,7 +485,7 @@ void AC_AutoTune_Multi::save_tuning_gains()
 
     // update GCS and log save gains event
     update_gcs(AUTOTUNE_MESSAGE_SAVED_GAINS);
-    AP::logger().Write_Event(LogEvent::AUTOTUNE_SAVEDGAINS);
+    LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_SAVEDGAINS);
 
     reset();
 }
@@ -796,7 +817,7 @@ void AC_AutoTune_Multi::updating_rate_d_up(float &tune_d, float tune_d_min, floa
                 // We have reached minimum D gain so stop tuning
                 tune_d = tune_d_min;
                 counter = AUTOTUNE_SUCCESS_COUNT;
-                AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+                LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
             }
         }
     } else if ((meas_rate_max < rate_target*(1.0f-AUTOTUNE_D_UP_DOWN_MARGIN)) && (tune_p <= tune_p_max)) {
@@ -805,7 +826,7 @@ void AC_AutoTune_Multi::updating_rate_d_up(float &tune_d, float tune_d_min, floa
         tune_p += tune_p*tune_p_step_ratio;
         if (tune_p >= tune_p_max) {
             tune_p = tune_p_max;
-            AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+            LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
         }
     } else {
         // we have a good measurement of bounce back
@@ -826,7 +847,7 @@ void AC_AutoTune_Multi::updating_rate_d_up(float &tune_d, float tune_d_min, floa
                 if (tune_d >= tune_d_max) {
                     tune_d = tune_d_max;
                     counter = AUTOTUNE_SUCCESS_COUNT;
-                    AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+                    LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
                 }
             } else {
                 ignore_next = false;
@@ -851,7 +872,7 @@ void AC_AutoTune_Multi::updating_rate_d_down(float &tune_d, float tune_d_min, fl
                 // We have reached minimum D so stop tuning
                 tune_d = tune_d_min;
                 counter = AUTOTUNE_SUCCESS_COUNT;
-                AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+                LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
             }
         }
     } else if ((meas_rate_max < rate_target*(1.0f-AUTOTUNE_D_UP_DOWN_MARGIN)) && (tune_p <= tune_p_max)) {
@@ -860,7 +881,7 @@ void AC_AutoTune_Multi::updating_rate_d_down(float &tune_d, float tune_d_min, fl
         tune_p += tune_p*tune_p_step_ratio;
         if (tune_p >= tune_p_max) {
             tune_p = tune_p_max;
-            AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+            LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
         }
     } else {
         // we have a good measurement of bounce back
@@ -884,7 +905,7 @@ void AC_AutoTune_Multi::updating_rate_d_down(float &tune_d, float tune_d_min, fl
             if (tune_d <= tune_d_min) {
                 tune_d = tune_d_min;
                 counter = AUTOTUNE_SUCCESS_COUNT;
-                AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+                LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
             }
         }
     }
@@ -909,14 +930,14 @@ void AC_AutoTune_Multi::updating_rate_p_up_d_down(float &tune_d, float tune_d_mi
         // do not decrease the D term past the minimum
         if (tune_d <= tune_d_min) {
             tune_d = tune_d_min;
-            AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+            LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
         }
         // decrease P gain to match D gain reduction
         tune_p -= tune_p*tune_p_step_ratio;
         // do not decrease the P term past the minimum
         if (tune_p <= tune_p_min) {
             tune_p = tune_p_min;
-            AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+            LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
         }
         // cancel change in direction
         positive_direction = !positive_direction;
@@ -932,7 +953,7 @@ void AC_AutoTune_Multi::updating_rate_p_up_d_down(float &tune_d, float tune_d_mi
             if (tune_p >= tune_p_max) {
                 tune_p = tune_p_max;
                 counter = AUTOTUNE_SUCCESS_COUNT;
-                AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+                LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
             }
         } else {
             ignore_next = false;
@@ -964,8 +985,8 @@ void AC_AutoTune_Multi::updating_angle_p_down(float &tune_p, float tune_p_min, f
         if (tune_p <= tune_p_min) {
             tune_p = tune_p_min;
             counter = AUTOTUNE_SUCCESS_COUNT;
-            AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
-        }
+            LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
+       }
     }
 }
 
@@ -991,7 +1012,7 @@ void AC_AutoTune_Multi::updating_angle_p_up(float &tune_p, float tune_p_max, flo
             if (tune_p >= tune_p_max) {
                 tune_p = tune_p_max;
                 counter = AUTOTUNE_SUCCESS_COUNT;
-                AP::logger().Write_Event(LogEvent::AUTOTUNE_REACHED_LIMIT);
+                LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_REACHED_LIMIT);
             }
         } else {
             ignore_next = false;
@@ -999,6 +1020,7 @@ void AC_AutoTune_Multi::updating_angle_p_up(float &tune_p, float tune_p_max, flo
     }
 }
 
+#if HAL_LOGGING_ENABLED
 void AC_AutoTune_Multi::Log_AutoTune()
 {
     if ((tune_type == SP_DOWN) || (tune_type == SP_UP)) {
@@ -1093,6 +1115,7 @@ void AC_AutoTune_Multi::Log_Write_AutoTuneDetails(float angle_cd, float rate_cds
         angle_cd*0.01f,
         rate_cds*0.01f);
 }
+#endif  // HAL_LOGGING_ENABLED
 
 void AC_AutoTune_Multi::twitch_test_init()
 {

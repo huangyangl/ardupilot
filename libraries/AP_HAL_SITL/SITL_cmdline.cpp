@@ -14,6 +14,7 @@
 #include <SITL/SIM_Helicopter.h>
 #include <SITL/SIM_SingleCopter.h>
 #include <SITL/SIM_Plane.h>
+#include <SITL/SIM_Glider.h>
 #include <SITL/SIM_QuadPlane.h>
 #include <SITL/SIM_Rover.h>
 #include <SITL/SIM_BalanceBot.h>
@@ -37,6 +38,9 @@
 #include <SITL/SIM_Webots_Python.h>
 #include <SITL/SIM_JSON.h>
 #include <SITL/SIM_Blimp.h>
+#include <SITL/SIM_NoVehicle.h>
+#include <SITL/SIM_StratoBlimp.h>
+
 #include <AP_Filesystem/AP_Filesystem.h>
 
 #include <AP_Vehicle/AP_Vehicle_Type.h>
@@ -88,7 +92,7 @@ void SITL_State::_usage(void)
            "\t--model|-M MODEL         set simulation model\n"
            "\t--config string          set additional simulation config string\n"
            "\t--fg|-F ADDRESS          set Flight Gear view address, defaults to 127.0.0.1\n"
-           "\t--disable-fgview         disable Flight Gear view\n"
+           "\t--enable-fgview          enable Flight Gear view\n"
            "\t--gimbal                 enable simulated MAVLink gimbal\n"
            "\t--autotest-dir DIR       set directory for additional files\n"
            "\t--defaults path          set path to defaults file\n"
@@ -141,6 +145,7 @@ static const struct {
     { "djix",               MultiCopter::create },
     { "cwx",                MultiCopter::create },
     { "hexa",               MultiCopter::create },
+    { "hexax",              MultiCopter::create },
     { "hexa-cwx",           MultiCopter::create },
     { "hexa-dji",           MultiCopter::create },
     { "octa",               MultiCopter::create },
@@ -169,6 +174,7 @@ static const struct {
     { "last_letter",        last_letter::create },
     { "tracker",            Tracker::create },
     { "balloon",            Balloon::create },
+    { "glider",             Glider::create },
     { "plane",              Plane::create },
     { "calibration",        Calibration::create },
     { "vectored",           Submarine::create },
@@ -181,6 +187,10 @@ static const struct {
     { "webots",             Webots::create },
     { "JSON",               JSON::create },
     { "blimp",              Blimp::create },
+    { "novehicle",          NoVehicle::create },
+#if AP_SIM_STRATOBLIMP_ENABLED
+    { "stratoblimp",        StratoBlimp::create },
+#endif
 };
 
 void SITL_State::_set_signal_handlers(void) const
@@ -212,8 +222,8 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
     // default to CMAC
     const char *home_str = nullptr;
     const char *model_str = nullptr;
-    const char *vehicle_str = SKETCH;
-    _use_fg_view = true;
+    const char *vehicle_str = AP_BUILD_TARGET_NAME;
+    _use_fg_view = false;
     char *autotest_dir = nullptr;
     _fg_address = "127.0.0.1";
     const char* config = "";
@@ -239,7 +249,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
     static struct timeval first_tv;
     gettimeofday(&first_tv, nullptr);
     time_t start_time_UTC = first_tv.tv_sec;
-    const bool is_replay = APM_BUILD_TYPE(APM_BUILD_Replay);
+    const bool is_example = APM_BUILD_TYPE(APM_BUILD_Replay) || APM_BUILD_TYPE(APM_BUILD_UNKNOWN);
 
     enum long_options {
         CMDLINE_GIMBAL = 1,
@@ -302,7 +312,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         {"config",          true,   0, 'c'},
         {"fg",              true,   0, 'F'},
         {"gimbal",          false,  0, CMDLINE_GIMBAL},
-        {"disable-fgview",  false,  0, CMDLINE_FGVIEW},
+        {"enable-fgview",   false,  0, CMDLINE_FGVIEW},
         {"autotest-dir",    true,   0, CMDLINE_AUTOTESTDIR},
         {"defaults",        true,   0, CMDLINE_DEFAULTS},
         {"uartA",           true,   0, CMDLINE_UARTA},
@@ -348,8 +358,8 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         {0, false, 0, 0}
     };
 
-    if (is_replay) {
-        model_str = "quad";
+    if (is_example) {
+        model_str = "novehicle";
         HALSITL::UARTDriver::_console = true;
     }
 
@@ -371,7 +381,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
 
     GetOptLong gopt(argc, argv, "hwus:r:CI:P:SO:M:F:c:v:",
                     options);
-    while (!is_replay && (opt = gopt.getoption()) != -1) {
+    while (!is_example && (opt = gopt.getoption()) != -1) {
         switch (opt) {
         case 'w':
             erase_all_storage = true;
@@ -441,7 +451,7 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
             enable_gimbal = true;
             break;
         case CMDLINE_FGVIEW:
-            _use_fg_view = false;
+            _use_fg_view = true;
             break;
         case CMDLINE_AUTOTESTDIR:
             autotest_dir = strdup(gopt.optarg);
@@ -620,18 +630,10 @@ void SITL_State::_parse_command_line(int argc, char * const argv[])
         _vehicle = ArduCopter;
     } else if (strcmp(vehicle_str, "Rover") == 0) {
         _vehicle = Rover;
-        // set right default throttle for rover (allowing for reverse)
-        pwm_input[2] = 1500;
     } else if (strcmp(vehicle_str, "ArduSub") == 0) {
         _vehicle = ArduSub;
-        for(uint8_t i = 0; i < 8; i++) {
-            pwm_input[i] = 1500;
-        }
     } else if (strcmp(vehicle_str, "Blimp") == 0) {
         _vehicle = Blimp;
-        for(uint8_t i = 0; i < 8; i++) {
-            pwm_input[i] = 1500;
-        }
     } else {
         _vehicle = ArduPlane;
     }
