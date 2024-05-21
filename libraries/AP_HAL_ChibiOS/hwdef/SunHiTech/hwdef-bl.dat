@@ -1,0 +1,7 @@
+include ../CUAV-X7/hwdef-bl.dat
+
+# board ID for firmware load，为SunHiTec指定一个新的 board id，不同于CUAV-X7
+APJ_BOARD_ID 7979
+
+# enable OpenDroneID
+define AP_OPENDRONEID_ENABLED 1

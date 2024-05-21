@@ -126,6 +126,9 @@ public:
     float distance_max() const;
     float distance_min() const;
 
+    // parameters for SunHiTech
+    AP_Float _qua_thdh; /// 思岚雷达噪点过滤阈值
+
     //
     // 3D boundary related methods
     //

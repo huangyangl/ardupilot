@@ -375,9 +375,17 @@ void AP_Proximity_RPLidarA2::parse_response_data()
 
     const float angle_sign = (params.orientation == 1) ? -1.0f : 1.0f;
     const float angle_deg = wrap_360(_payload.sensor_scan.angle_q6/64.0f * angle_sign + params.yaw_correction);
-    const float distance_m = (_payload.sensor_scan.distance_q2/4000.0f);
-#if RP_DEBUG_LEVEL >= 2
+    float qua=5.0;
+
+    // for SunHiTech
     const float quality = _payload.sensor_scan.quality;
+    if(frontend._qua_thdh>0.0&&frontend._qua_thdh<255.0)
+        qua=frontend._qua_thdh;
+    if(qua<0.0||qua>255.0) qua=5.0;
+    const float distance_m = quality<qua? 40.0:(_payload.sensor_scan.distance_q2/4000.0f);
+    // for SunHiTech end
+
+#if RP_DEBUG_LEVEL >= 2
     Debug(2, "   D%02.2f A%03.1f Q%0.2f", distance_m, angle_deg, quality);
 #endif
     _last_distance_received_ms = AP_HAL::millis();
