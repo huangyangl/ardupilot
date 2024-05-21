@@ -1,6 +1,8 @@
-#include "AC_CustomControl_ADRC.h"
+#include "AC_CustomControl_config.h"
 
-#if CUSTOMCONTROL_ADRC_ENABLED
+#if AP_CUSTOMCONTROL_ADRC_ENABLED
+
+#include "AC_CustomControl_ADRC.h"
 
 #include <GCS_MAVLink/GCS.h>
 
@@ -63,6 +65,8 @@ Vector3f AC_CustomControl_ADRC::update(void)
     motor_out.y = _rate_pitch_cont.update_all(rate_target.y, gyro_latest.y, _motors->limit.pitch);
     motor_out.z = _rate_yaw_cont.update_all(rate_target.z, gyro_latest.z, _motors->limit.yaw);
 
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "adrc custom controller working");
+
     return motor_out;
 }
 
@@ -76,4 +80,4 @@ void AC_CustomControl_ADRC::reset(void)
     _rate_yaw_cont.reset_eso(gyro_latest.z);
 }
 
-#endif
+#endif  // AP_CUSTOMCONTROL_ADRC_ENABLED
