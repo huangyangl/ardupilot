@@ -78,13 +78,6 @@ const AP_Param::GroupInfo AP_Proximity::var_info[] = {
     // @Range: 0 10
     // @User: Advanced
     AP_GROUPINFO_FRAME("_ALT_MIN", 25, AP_Proximity, _alt_min, 1.0f, AP_PARAM_FRAME_COPTER | AP_PARAM_FRAME_HELI | AP_PARAM_FRAME_TRICOPTER),
-    
-    // @Param: _QUALITY_THRDH
-    // @DisplayName: My New Library Parameter
-    // @Description: The new library parameter description goes here
-    // @Range: 0 10
-    // @User: Advanced
-    AP_GROUPINFO("_QUA_THRH", 26, AP_Proximity, _qua_thdh, 5.0f), //20240521 debug
 
     // @Group: 1
     // @Path: AP_Proximity_Params.cpp
@@ -123,6 +116,13 @@ const AP_Param::GroupInfo AP_Proximity::var_info[] = {
     // @Path: AP_Proximity_MR72_CAN.cpp
     AP_SUBGROUPVARPTR(drivers[3], "4_",  29, AP_Proximity, backend_var_info[3]),
 #endif
+
+    // @Param: _QUALITY_THRDH
+    // @DisplayName: My New Library Parameter
+    // @Description: The new library parameter description goes here
+    // @Range: 0 10
+    // @User: Advanced
+    AP_GROUPINFO("_QUA_THRH", 30, AP_Proximity, _qua_thdh, 5.0f), //20240521 debug
 
     AP_GROUPEND
 };
