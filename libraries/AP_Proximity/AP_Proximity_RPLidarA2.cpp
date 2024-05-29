@@ -78,6 +78,7 @@ void AP_Proximity_RPLidarA2::update(void)
     // request device info 3sec after reset
     // required for S1 support that sends only 9 bytes after a reset (A1,A2 send 63)
     uint32_t now_ms = AP_HAL::millis();
+    //第一次进入
     if ((_state == State::RESET) && (now_ms - _last_reset_ms > 3000)) {
         send_request_for_device_info();
         _state = State::AWAITING_RESPONSE;
@@ -86,12 +87,13 @@ void AP_Proximity_RPLidarA2::update(void)
 
     get_readings();
 
+    //接收distance数据超时，重启雷达 并 触发RESET
     // check for timeout and set health status
     if (AP_HAL::millis() - _last_distance_received_ms > COMM_ACTIVITY_TIMEOUT_MS) {
         set_status(AP_Proximity::Status::NoData);
         Debug(1, "LIDAR NO DATA");
         if (AP_HAL::millis() - _last_reset_ms > 10000) {
-            reset_rplidar();
+                reset_rplidar();
         }
     } else {
         set_status(AP_Proximity::Status::Good);
@@ -112,6 +114,8 @@ float AP_Proximity_RPLidarA2::distance_max() const
         return 12.0f;
     case Model::S1:
         return 40.0f;
+    case Model::S3:
+        return 40.0f;
     }
     return 0.0f;
 }
@@ -127,6 +131,8 @@ float AP_Proximity_RPLidarA2::distance_min() const
     case Model::C1:
     case Model::S1:
         return 0.2f;
+    case Model::S3:
+        return 0.1f;
     }
     return 0.0f;
 }
@@ -205,17 +211,27 @@ bool AP_Proximity_RPLidarA2::make_first_byte_in_payload(uint8_t desired_byte)
 
 void AP_Proximity_RPLidarA2::get_readings()
 {
+    /* 一些说明
+    _payload：雷达缓存（存放雷达串口数据的缓存），最大字节数256，类型为union
+    nbytes：当前读取到的串口数据字节数
+    _byte_count：_payload中可供消耗的字节数（未读的字节数）
+    bytes_to_read：_payload的空余字节数（还可以从串口存入_payload的字节数）
+    bytes_read：成功把串口新数据存入_payload的字节数
+    */
     Debug(2, "             CURRENT STATE: %u ", (unsigned)_state);
+    //串口无数据，直接返回
     const uint32_t nbytes = _uart->available();
     if (nbytes == 0) {
         return;
     }
+    //可写入缓存字节数为0，触发RESET
     const uint32_t bytes_to_read = MIN(nbytes, sizeof(_payload)-_byte_count);
     if (bytes_to_read == 0) {
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         reset();
         return;
     }
+    //将串口新数据存入缓存的 _payload[_byte_count] ~ _payload[bytes_to_read] 位置处，返回成功写入的字节数
     const uint32_t bytes_read = _uart->read(&_payload[_byte_count], bytes_to_read);
     if (bytes_read == 0) {
         // this is bad; we were told there were bytes available
@@ -223,9 +239,10 @@ void AP_Proximity_RPLidarA2::get_readings()
         reset();
         return;
     }
-    _byte_count += bytes_read;
+    _byte_count += bytes_read;//成功将串口新数据存入缓存，意味着缓存中可供消耗字节数增加
 
     uint32_t previous_loop_byte_count = UINT32_MAX;
+    //消耗(读取并使用)缓存中的数据，直到将缓存中可供消耗字节消耗完毕或异常退出为止
     while (_byte_count) {
         if (_byte_count >= previous_loop_byte_count) {
             // this is a serious error, we should always consume some
@@ -235,13 +252,14 @@ void AP_Proximity_RPLidarA2::get_readings()
             return;
         }
         previous_loop_byte_count = _byte_count;
-
+        //根据_state来选择性消耗缓存中的字节
         switch(_state){
         case State::RESET: {
             // looking for 0x52 at start of buffer; the 62 following
             // bytes are "information"
+            //将固定字符'R'挪动到缓存首位_payload[0]
             if (!make_first_byte_in_payload('R')) { // that's 'R' as in RPiLidar
-                return;
+                return;//如果缓存中没有'R'，直接返回
             }
             if (_byte_count < 63) {
                 return;
@@ -257,7 +275,7 @@ void AP_Proximity_RPLidarA2::get_readings()
             // 63 is the magic number of bytes in the spewed-out
             // reset data ... so now we'll just drop that stuff on
             // the floor.
-            consume_bytes(63);
+            consume_bytes(63);//RESET操作固定消耗63字节
             send_request_for_device_info();
             _state = State::AWAITING_RESPONSE;
             continue;
@@ -344,8 +362,13 @@ void AP_Proximity_RPLidarA2::parse_response_device_info()
         model = Model::S1;
         device_type = "S1";
         break;
+    case 0x81:
+        model = Model::S3;
+        device_type = "S3";
+        break;
     default:
         Debug(1, "Unknown device (%u)", _payload.device_info.model);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Unknown device: (%u) ", _payload.device_info.model);
     }
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "RPLidar %s hw=%u fw=%u.%u", device_type, _payload.device_info.hardware, _payload.device_info.firmware_minor, _payload.device_info.firmware_major);
     send_scan_mode_request();
