@@ -14,3 +14,6 @@ SunHiTech分支创建自adrc-1.0分支，目前主要开发了包括 adrc + OEM 
 4.运行./waf submodule_force_clean 或 git submodule update --init --recursive更新仓库子模块。
 5.编译验证代码是否有问题
 4.将merge成功的SunHiTech分支push到远程仓库。
+* **编译固件**
+./waf configure --board=SunHiTech  --enable-custom-controller
+./waf copter 

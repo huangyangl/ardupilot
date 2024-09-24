@@ -1,86 +1,90 @@
 @include ../CUAV-X7/defaults.parm
 
-# preSet paras
+# 机架类型、旋翼类型 
+FRAME_CLASS 2  # 1四旋翼, 2旋翼, 3旋翼
+FRAME_TYPE 1 # 1X, 2V, 3H
 
-# Frame Class and Type 
-FRAME_CLASS 1
-FRAME_TYPE 1
-
-# FLTMODE
+# 飞行模式
 FLTMODE1 0
 FLTMODE4 2
 FLTMODE6 5
 
-# safty switch
+# 安全开关
 BRD_SAFETY_DEFLT 0
 
 # thrust factor
 MOT_THST_EXPO 0.65
 
-# LOIT_BRK_DELAY
+# 刹车延迟
 LOIT_BRK_DELAY 0
 
-# DISARM_DELAY
+# 上锁延迟
 DISARM_DELAY 5
 
 # EKF
 AHRS_EKF_TYPE 3
 EK3_ENABLE 1
 
-# alt yaw source
+# 高度源、偏航源
 EK3_SRC1_POSZ 3
-EK3_SRC1_YAW 2
+EK3_SRC1_YAW 3  # 2 GPS, 3 GPS with Compass Fallback
 
-# GPS-CUAV-2HP, can connect
-GPS_TYPE 9
-CAN_P1_DRIVER 1
-GPS_MB1_TYPE 1
-GPS_MB1_OFS_X 0
-GPS_MB1_OFS_Y -0.50
-GPS_MB1_OFS_Z 0
-GPS_POS1_X 0
-GPS_POS1_Y -0.25
-GPS_POS1_Z 0
+# GPS CUAV 2HP
+GPS_AUTO_CONFIG 0 # 0 Disables automatic configuration
+GPS_TYPE 9 @READONLY # 9 droncan, 25 UART
+GPS1_TYPE 9 @READONLY # 9 droncan, 25 UART
+CAN_P1_DRIVER 1 # CAN1驱动
+# 主从天线偏移
+GPS_MB1_TYPE 1 # GPS1移动基站主天线相对于从天线的偏移量，修改后刷新参数可以显示下一个参数
+GPS_MB1_OFS_X 0 # 主天线相对于从天线的X轴偏移量（距离，以米为单位），如果主天线在从天线的前面为正值
+GPS_MB1_OFS_Y -0.5 # 主天线相对于从天线的Y轴偏移量（距离，以米为单位），如果主天线在从天线的右侧为正值
+GPS_MB1_OFS_Z 0 # 主天线相对于从天线的Z轴偏移量（距离，以米为单位），如果主天线低于从天线，则为正偏移量。
+# GPS定位偏移
+GPS_POS1_X 0 # 主天线相对于重心的X轴偏移量（距离，以米为单位），如果主天线在重心的前面为正值
+GPS_POS1_Y -0.25 # 主天线相对于重心的Y轴偏移量（距离，以米为单位），如果主天线在重心的右侧为正值
+GPS_POS1_Z 0 # 主天线相对于重心的Z轴偏移量（距离，以米为单位），如果主天线低于重心位置为正值
+
+EK3_MAG_CAL 5
 
 # power detect
 CAN_P1_DRIVER 1
 CAN_P2_DRIVER 1
 BATT_MONITOR 8
 
-# MK32,P8
+# 数传
+SERIAL1_PROTOCOL 2
+SERIAL1_BAUD 57
 SERIAL2_PROTOCOL 2
 SERIAL2_BAUD 57
-SERIAL3_PROTOCOL 2
-SERIAL3_BAUD 57
 
-# max lean angle
+# 最大倾角
 ANGLE_MAX 1500
 
 # hover thrust learn
 MOT_HOVER_LEARN 2
 
-# filter
-INS_ACCEL_FILTER 30
-INS_GYRO_FILTER 30
+# 低通滤波器
+INS_ACCEL_FILTER 20
+INS_GYRO_FILTER 20
 
-# angle rate accel limit
-ATC_ACCEL_P_MAX 50000
-ATC_ACCEL_R_MAX 50000
-ATC_ACCEL_Y_MAX 18000
+# 自稳参数(角速度环参数)：最大角加速度
+ATC_ACCEL_P_MAX 20000
+ATC_ACCEL_R_MAX 20000
+ATC_ACCEL_Y_MAX 10000
 
 # manual input filter limit
-ATC_RAT_PIT_FLTD 15
-ATC_RAT_PIT_FLTT 15
-ATC_RAT_RLL_FLTD 15
-ATC_RAT_RLL_FLTT 15
-ATC_RAT_YAW_FLTE 2
-ATC_RAT_YAW_FLTT 15
+ATC_RAT_PIT_FLTD 20
+ATC_RAT_PIT_FLTT 20
+ATC_RAT_RLL_FLTD 20
+ATC_RAT_RLL_FLTT 20
+ATC_RAT_YAW_FLTE 2.5
+ATC_RAT_YAW_FLTT 20
 
 # imu sample
 INS_LOG_BAT_OPT 4
 INS_LOG_BAT_MASK 1
 
-# max yaw rate
+# 最大偏航速率
 PILOT_Y_RATE 80
 
 # S1
@@ -135,4 +139,3 @@ GPS_TYPE 9
 GPS1_TYPE 9
 GPS_TYPE2 0
 GPS2_TYPE 0
-
